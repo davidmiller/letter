@@ -1,0 +1,42 @@
+
+# tmpfiles
+*~
+*#
+*.swp
+
+
+# structural
+build
+dist
+
+
+# translations
+*.mo
+
+
+# bytecode
+*.py[co]
+
+
+# packaging
+*.egg
+*.egg-info
+dist
+eggs
+parts
+develop-eggs
+MANIFEST
+
+
+# installer
+pip-log.txt
+
+
+# testing
+.coverage
+.tox
+
+
+# documentation
+doc/build
+
