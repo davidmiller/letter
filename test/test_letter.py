@@ -4,6 +4,7 @@ Unittests for the letter packate
 import sys
 import unittest
 
+import ffs
 import mailtools
 from mock import MagicMock, patch
 
@@ -86,6 +87,11 @@ class PostmanTestCase(unittest.TestCase):
         tpl = self.p._find_tpl('that')
         self.assertEqual(None, tpl)
 
+    def test_find_tpl_no_dir(self):
+        "A dir in our path doesn't exist"
+        self.p.tpls = [ffs.Path('does/not/exist/at/this/point')]
+        tpl = self.p._find_tpl('that')
+        self.assertEqual(None, tpl)
 
     def test_send_tpl(self):
         "Send with a template"

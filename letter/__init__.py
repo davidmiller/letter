@@ -113,6 +113,8 @@ class Postman(object):
         """
         found = None
         for loc in self.tpls:
+            if not loc:
+                continue
             contents = [f for f in loc.ls() if f.find(name) != -1 and f.endswith('.jinja2')]
             if contents:
                 found = contents[0]
