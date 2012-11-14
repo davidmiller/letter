@@ -26,7 +26,7 @@ setup(
     description = "Send you letters for fun or profit",
     long_description = README + "\n\n" + CHANGES,
     install_requires = [
-        'ffs',
+        'ffs>=0.0.7',
         'jinja2',
         'mailtools',
         'regex'
