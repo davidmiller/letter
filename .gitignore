@@ -40,3 +40,4 @@ pip-log.txt
 # documentation
 doc/build
 
+/wat.sqlite

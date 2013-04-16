@@ -4,6 +4,8 @@ Unittests for the letter packate
 import sys
 import unittest
 
+from django.core import mail
+from django.test import utils, TestCase
 import ffs
 import mailtools
 from mock import MagicMock, patch
@@ -11,6 +13,14 @@ from mock import MagicMock, patch
 if sys.version_info <  (2, 7): import unittest2 as unittest
 
 import letter
+
+
+def setup_module():
+    utils.setup_test_environment()
+
+def teardown_module():
+    utils.teardown_test_environment()
+
 
 class PostmanTestCase(unittest.TestCase):
 
@@ -125,6 +135,34 @@ class PostmanTestCase(unittest.TestCase):
                     pass #Should never get here.
 
 
+class DjangoPostmanTestCase(TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        mail.outbox = []
+
+    def test_send_multipart(self):
+        "Should send"
+        postie = letter.DjangoPostman()
+
+        class Message:
+            To      = 'larry@example.com'
+            From    = 'bill@example.com'
+            Subject = 'My Cool mail'
+            Context = {
+                'href': 'http://example.com',
+                'link': 'Examples!',
+                }
+
+        with postie.template('emails/cool_email'):
+            Message.send()
+
+        self.assertEqual(1, len(mail.outbox))
+        self.assertEqual('bill@example.com', mail.outbox[0].from_email)
+
+
+
+
 if __name__ == '__main__':
     unittest.main()
-
