@@ -3,27 +3,25 @@ Send letters electronically.
 
 We assume you're likely to want to send emails from templates.
 Let's make that as easy as possible.
-
-Let's do as little as possible.
-
-If you don't want easy template integration, then you probably just want to use
-mailtools. Look that up instead :)
 """
 from _version import __version__
 
 import contextlib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 import types
 
 import ffs
 from ffs.contrib import mold
 import jinja2
-import mailtools
 import regex
 
 __all__ = [
     '__version__',
     'Postman',
     'DjangoPostman',
+    'GmailPostman',
     ]
 
 u = unicode
@@ -31,6 +29,195 @@ flatten = lambda x: [item for sublist in x for item in sublist]
 
 class Error(Exception): pass
 class NoTemplateError(Error): pass
+class NoContentError(Error): pass
+
+
+class BaseMailer(object):
+    """
+    Mailers either handle the construction and delivery of message
+    objects once we have determined the contents etc.
+    """
+
+    def tolist(self, to):
+        """
+        Make sure that our addressees are a unicoded list
+
+        Arguments:
+        - `to`: str or list
+
+        Return: [u, ...]
+        Exceptions: None
+        """
+        return ', '.join(isinstance(to, list) and [u(x) for x in to] or [u(to)])
+
+    def send(self, sender, to, subject, plain=None, html=None):
+        """
+        Send the message.
+
+        If we have PLAIN and HTML versions, send a multipart alternative
+        MIME message, else send whichever we do have.
+
+        If we have neither, raise NoContentError
+
+        Arguments:
+        - `sender`: str
+        - `to`: list
+        - `subject`: str
+        - `plain`: str
+        - `html`: str
+
+        Return: None
+        Exceptions: NoContentError
+        """
+        if not plain and not html:
+            raise NoContentError()
+
+class BaseSMTPMailer(BaseMailer):
+    """
+    Construct the message
+    """
+
+    def send(self, sender, to, subject, plain=None, html=None):
+        """
+        Send the message.
+
+        If we have PLAIN and HTML versions, send a multipart alternative
+        MIME message, else send whichever we do have.
+
+        If we have neither, raise NoContentError
+
+        Arguments:
+        - `sender`: str
+        - `to`: list
+        - `subject`: str
+        - `plain`: str
+        - `html`: str
+
+        Return: None
+        Exceptions: NoContentError
+        """
+        super(BaseSMTPMailer, self).send(sender, to, subject, plain=plain, html=html)
+        # Create message container - the correct MIME type is multipart/alternative.
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = u(subject)
+        msg['From']    = u(sender)
+        msg['To']      = self.tolist(to)
+
+        # Attach parts into message container.
+        # According to RFC 2046, the last part of a multipart message, in this case
+        # the HTML message, is best and preferred.
+        if plain:
+            msg.attach(MIMEText(u(plain), 'plain'))
+        if html:
+            msg.attach(MIMEText(u(html), 'html'))
+
+        self.deliver(msg)
+
+class SMTPMailer(BaseSMTPMailer):
+    """
+    Use SMTP to deliver our message.
+    """
+
+    def __init__(self, host, port):
+        """
+        Store vars
+        """
+        self.host = host
+        self.port = port
+
+    def deliver(self, message):
+        """
+        Deliver our message
+
+        Arguments:
+        - `message`: MIMEMultipart
+
+        Return: None
+        Exceptions: None
+        """
+        # Send the message via local SMTP server.
+        s = smtplib.SMTP(self.host, self.port)
+        # sendmail function takes 3 arguments: sender's address, recipient's address
+        # and message to send - here it is sent as one string.
+        s.sendmail(message['From'], message['To'], message.as_string())
+        s.quit()
+        return
+
+class SMTPAuthenticatedMailer(BaseSMTPMailer):
+    """
+    Use authenticated SMTP to deliver our message
+    """
+    def __init__(self, host, port, user, pw):
+        self.host = host
+        self.port = port
+        self.user = user
+        self.pw = pw
+
+
+    def deliver(self, message):
+        """
+        Deliver our message
+
+        Arguments:
+        - `message`: MIMEMultipart
+
+        Return: None
+        Exceptions: None
+        """
+        # Send the message via local SMTP server.
+        s = smtplib.SMTP(self.host, self.port)
+        s.ehlo()
+        s.starttls()
+        s.login(self.user, self.pw)
+        # sendmail function takes 3 arguments: sender's address, recipient's address
+        # and message to send - here it is sent as one string.
+        s.sendmail(message['From'], message['To'], message.as_string())
+        s.quit()
+        return
+
+
+
+class DjangoMailer(BaseMailer):
+    """
+    Send email using whatever is configured in our Django project's
+    email settings etc etc
+    """
+
+    def send(self, sender, to, subject, plain=None, html=None):
+        """
+        Send the message.
+
+        If we have PLAIN and HTML versions, send a multipart alternative
+        MIME message, else send whichever we do have.
+
+        If we have neither, raise NoContentError
+
+        Arguments:
+        - `sender`: str
+        - `to`: list
+        - `subject`: str
+        - `plain`: str
+        - `html`: str
+
+        Return: None
+        Exceptions: NoContentError
+        """
+        super(DjangoMailer, self).send(self, sender, to, subject, plain=plain, html=html)
+
+        # This comes straight from the docs at
+        # https://docs.djangoproject.com/en/dev/topics/email/
+        from django.core.mail import EmailMultiAlternatives
+
+        if not plain:
+            plain = ''
+
+        msg = EmailMultiAlternatives(u(subject), u(text_content), u(plain), self.tolist(to))
+
+        if html_content:
+            msg.attach_alternative(u(html), "text/html")
+
+        msg.send()
+        return
 
 
 class BasePostman(object):
@@ -84,36 +271,6 @@ class BasePostman(object):
         """
         return self._find_tpl(name, extension='.txt'), self._find_tpl(name, extension='.html')
 
-
-class Postman(BasePostman):
-    """
-    The Postman is your main entrypoint to sending Electronic Mail.
-
-    Set up an SMTP mailer at HOST:PORT using TEMPLATEDIR as the place
-    to look for templates.
-
-    If TRANSPORT_ARGS is passed, pass through these arguments to the
-    mail transport.
-
-    If BLOCKING is True, use the blocking mailer.
-
-    Arguments:
-    - `templatedir`: str
-    - `host`: str
-    - `port`: int
-    - `transport_args`: dict
-    - `blocking`: bool
-
-    Return: None
-    Exceptions: None
-    """
-
-    def __init__(self, templatedir, host, port=25, transport_args={}, blocking=False):
-        self.mailer = mailtools.SMTPMailer(host, port=port, transport_args=transport_args)
-        if not blocking:
-            self.mailer = mailtools.ThreadedMailer(self.mailer)
-        super(BasePostman, self).__init__(templatedir)
-
     def _send(self, sender, to, subject, message):
         """
         Send a Letter (MESSAGE) from SENDER to TO, with the subject SUBJECT
@@ -127,9 +284,7 @@ class Postman(BasePostman):
         Return: None
         Exceptions: None
         """
-        tolist = isinstance(to, list) and [u(x) for x in to] or [u(to)]
-        sender, subject, message = u(sender), u(subject), u(message)
-        self.mailer.send_plain(sender, tolist, subject, message)
+        self.mailer.send(sender, to, subject, plain=message)
         return
 
     send = _send
@@ -148,9 +303,25 @@ class Postman(BasePostman):
         Return: None
         Exceptions: None
         """
-        message = mold.cast(self._activetpl, **kwargs)
-        self._send(sender, to, subject, message)
+        # message = mold.cast(self._activetpl, **kwargs)
+        # self._send(sender, to, subject, message)
+        plain, html = self.body(**kwargs)
+        self.mailer.send(sender, to, subject, plain=plain, html=html)
         return
+
+    def body(self, **kwargs):
+        """
+        Return the plain and html versions of our contents.
+
+        Return: tuple
+        Exceptions: None
+        """
+        text_content, html_content = None, None
+        if self.plain:
+            text_content = mold.cast(self.plain, **kwargs)
+        if self.html:
+            html_content = mold.cast(self.html, **kwargs)
+        return text_content, html_content
 
     @contextlib.contextmanager
     def template(self, name):
@@ -165,16 +336,55 @@ class Postman(BasePostman):
         Return: None
         Exceptions: None
         """
-        tpl = self._find_tpl(name)
-        if tpl is None:
-            raise NoTemplateError(name)
+        self.plain, self.html = self._find_tpls(name)
+        if not self.plain:
+            self.plain = self._find_tpl(name)
         try:
-            self._activetpl = tpl
             self.send = self._sendtpl
             yield
         finally:
-            self._activetpl = None
+            self.plain, self.html = None, None
             self.send = self._send
+
+
+class SMTPPostman(BasePostman):
+    """
+    The SMTP Postman is a utility class for using SMTP as
+    a delivery method for our messages.
+    """
+    def __init__(self, templatedir=None, host='localhost', port=25):
+        super(SMTPPostman, self).__init__(templatedir)
+        self.mailer = SMTPMailer(host, port)
+
+
+class SMTPAuthenticatedPostman(BasePostman):
+    """
+    The SMTP Postman is a utility class for using SMTP as
+    a delivery method for our messages.
+    """
+    def __init__(self, templatedir=None, host='localhost', port=25, user=None, pw=None):
+        super(SMTPAuthenticatedPostman, self).__init__(templatedir)
+        self.mailer = SMTPAuthenticatedMailer(host, port, user, pw)
+
+
+
+class Postman(SMTPPostman):
+    """
+    The Postman is your main entrypoint to sending Electronic Mail.
+
+    Set up an SMTP mailer at HOST:PORT using TEMPLATEDIR as the place
+    to look for templates.
+
+    If BLOCKING is True, use the blocking mailer.
+
+    Arguments:
+    - `templatedir`: str
+    - `host`: str
+    - `port`: int
+
+    Return: None
+    Exceptions: None
+    """
 
 
 class DjangoPostman(BasePostman):
@@ -192,58 +402,21 @@ class DjangoPostman(BasePostman):
             settings.configure()
         self.settings = settings
         super(DjangoPostman, self).__init__(settings.TEMPLATE_DIRS)
+        self.mailer = DjangoMailer()
 
 
-    @contextlib.contextmanager
-    def template(self, name):
-        """
-        Set the active template for use with our postman.
-        If a Message class is defined, send it.
+class GmailPostman(SMTPAuthenticatedPostman):
+    """
+    OK, so we're sending emails via Google's SMTP servers.
 
-        Arguments:
-        - `name`: str
-
-        Return: None
-        Exceptions: NoTemplateError
-        """
-        try:
-            self.plain, self.html = self._find_tpls(name)
-            yield
-        except:
-            raise
-        finally:
-            self.plain, self.html = None, None
-            pass
-
-    def send(self, from_email, to_email, subject, **kwargs):
-        """
-        Actually send the mail, via Django's interface
-
-        Arguments:
-        - `from_email`: str
-        - `to_email`: list
-        - `subject`: str
-        - `kwargs`:
-
-        Return: None
-        Exceptions: None
-        """
-        # This comes straight from the docs at
-        # https://docs.djangoproject.com/en/dev/topics/email/
-        from django.core.mail import EmailMultiAlternatives
-
-        text_content, html_content = '', ''
-        if self.plain:
-            text_content = mold.cast(self.plain, **kwargs)
-        if self.html:
-            html_content = mold.cast(self.html, **kwargs)
-
-        msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send()
-        return
-
-
+    >>> postie = GmailPostman('.', user='username', pw='password')
+    """
+    def __init__(self, templatedir='.', user=None, pw=None):
+        super(GmailPostman, self).__init__(templatedir=templatedir,
+                                           host='smtp.gmail.com',
+                                           port=587,
+                                           user=user,
+                                           pw=pw)
 
 class Letter(object):
     """
@@ -254,6 +427,15 @@ class Letter(object):
         to = klass.To
         if isinstance(to, types.StringTypes):
             to = [to]
+        if getattr(klass, 'Body', None):
+            klass.Postie.send(
+                klass.From,
+                to,
+                klass.Subject,
+                klass.Body
+                )
+            return
+
         with klass.Postie.template(klass.Template):
             klass.Postie.send(
                 klass.From,

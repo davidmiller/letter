@@ -1,3 +1,9 @@
+0.2.0
+++++++++++++++++++++++++++++++
+Stop relying on Mailtools.
+letter.Letter interface for SMTP messages as well.
+
+
 0.1.0
 ++++++++++++++++++
 Add a Django compatibility layer for composing emails there.

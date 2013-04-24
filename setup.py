@@ -28,7 +28,6 @@ setup(
     install_requires = [
         'ffs>=0.0.7',
         'jinja2',
-        'mailtools',
         'regex'
         ],
     classifiers = [
