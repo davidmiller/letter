@@ -1,12 +1,14 @@
-import os
+import getpass, os, time
+
+user = raw_input('Username > ')
+pw   = getpass.getpass()
 
 import letter
 
-user = os.environ.get('USER', 'not a real user dummy')
-pw   = os.environ.get('PASS', 'not a real pass dummy')
+HERE = os.path.dirname(__file__)
 
 class Message(letter.Letter):
-    Postie   = letter.GmailPostman('.', user=user, pw=pw)
+    Postie   = letter.GmailPostman(HERE, user=user, pw=pw)
 
     From     = 'bill@example.com'
     To       = 'larry@example.com'
@@ -16,6 +18,7 @@ class Message(letter.Letter):
     Context  = {
         'href': 'http://example.com',
         'link': 'Examples!',
+        'time': time.time()
         }
 
 Message.send()

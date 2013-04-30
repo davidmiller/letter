@@ -1,8 +1,11 @@
+0.2.2
++++++
+Fix bug sending mails to multpile recipients.
+
 0.2.0
 ++++++++++++++++++++++++++++++
 Stop relying on Mailtools.
 letter.Letter interface for SMTP messages as well.
-
 
 0.1.0
 ++++++++++++++++++

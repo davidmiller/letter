@@ -7,6 +7,7 @@ Let's make that as easy as possible.
 from _version import __version__
 
 import contextlib
+import email
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
@@ -15,17 +16,21 @@ import types
 import ffs
 from ffs.contrib import mold
 import jinja2
-import regex
 
 __all__ = [
     '__version__',
     'Postman',
     'DjangoPostman',
     'GmailPostman',
+    'setup_test_environment',
+    'teardown_test_environment'
     ]
 
 u = unicode
 flatten = lambda x: [item for sublist in x for item in sublist]
+
+OUTBOX = []
+SMTP   = None
 
 class Error(Exception): pass
 class NoTemplateError(Error): pass
@@ -72,6 +77,7 @@ class BaseMailer(object):
         if not plain and not html:
             raise NoContentError()
 
+
 class BaseSMTPMailer(BaseMailer):
     """
     Construct the message
@@ -111,7 +117,8 @@ class BaseSMTPMailer(BaseMailer):
         if html:
             msg.attach(MIMEText(u(html), 'html'))
 
-        self.deliver(msg)
+        self.deliver(msg, to)
+
 
 class SMTPMailer(BaseSMTPMailer):
     """
@@ -125,7 +132,7 @@ class SMTPMailer(BaseSMTPMailer):
         self.host = host
         self.port = port
 
-    def deliver(self, message):
+    def deliver(self, message, to):
         """
         Deliver our message
 
@@ -139,9 +146,11 @@ class SMTPMailer(BaseSMTPMailer):
         s = smtplib.SMTP(self.host, self.port)
         # sendmail function takes 3 arguments: sender's address, recipient's address
         # and message to send - here it is sent as one string.
-        s.sendmail(message['From'], message['To'], message.as_string())
+
+        s.sendmail(message['From'], to, message.as_string())
         s.quit()
         return
+
 
 class SMTPAuthenticatedMailer(BaseSMTPMailer):
     """
@@ -154,7 +163,7 @@ class SMTPAuthenticatedMailer(BaseSMTPMailer):
         self.pw = pw
 
 
-    def deliver(self, message):
+    def deliver(self, message, to):
         """
         Deliver our message
 
@@ -171,10 +180,9 @@ class SMTPAuthenticatedMailer(BaseSMTPMailer):
         s.login(self.user, self.pw)
         # sendmail function takes 3 arguments: sender's address, recipient's address
         # and message to send - here it is sent as one string.
-        s.sendmail(message['From'], message['To'], message.as_string())
+        s.sendmail(message['From'], to, message.as_string())
         s.quit()
         return
-
 
 
 class DjangoMailer(BaseMailer):
@@ -367,7 +375,6 @@ class SMTPAuthenticatedPostman(BasePostman):
         self.mailer = SMTPAuthenticatedMailer(host, port, user, pw)
 
 
-
 class Postman(SMTPPostman):
     """
     The Postman is your main entrypoint to sending Electronic Mail.
@@ -418,6 +425,7 @@ class GmailPostman(SMTPAuthenticatedPostman):
                                            user=user,
                                            pw=pw)
 
+
 class Letter(object):
     """
     An individual Letter
@@ -443,3 +451,57 @@ class Letter(object):
                 klass.Subject,
                 **klass.Context
                 )
+
+"""
+Testing utilities start here.
+"""
+def _parse_outgoing_mail(sender, to, msgstring):
+    """
+    Parse an outgoing mail and put it into the OUTBOX.
+
+
+    Arguments:
+    - `sender`: str
+    - `to`: str
+    - `msgstring`: str
+
+    Return: None
+    Exceptions: None
+    """
+    global OUTBOX
+    OUTBOX.append(email.message_from_string(msgstring))
+    return
+
+def setup_test_environment():
+    """
+    Set up our environment to test the sending of
+    email with letter.
+
+    We return an outbox for you, into which all emails
+    will be delivered.
+
+    Requires the Mock library.
+
+    Return: list
+    Exceptions: None
+    """
+    import mock
+    global OUTBOX, SMTP
+
+    SMTP = smtplib.SMTP
+    mock_smtp = mock.MagicMock(name='Mock SMTP')
+    mock_smtp.return_value.sendmail.side_effect = _parse_outgoing_mail
+    smtplib.SMTP = mock_smtp
+    return OUTBOX
+
+def teardown_test_environment():
+    """
+    Tear down utilities for the testing of mail sent with letter.
+
+    Return: None
+    Exceptions: None
+    """
+    global OUTBOX, SMTP
+    smtplib.SMTP = SMTP
+    OUTBOX = []
+    return
