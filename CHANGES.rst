@@ -1,6 +1,7 @@
-0.2.2
-+++++
+0.2.2.1
++++++++
 Fix bug sending mails to multpile recipients.
+Add Bcc and Cc fields.
 
 0.2.0
 ++++++++++++++++++++++++++++++

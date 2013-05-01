@@ -51,7 +51,7 @@ def _stringlist(*args):
     Return: [""...]
     Exceptions: None
     """
-    return list(itertools.chain.from_iterable(itertools.repeat(x,1) if stringy(x) else x for x in args))
+    return list(itertools.chain.from_iterable(itertools.repeat(x,1) if stringy(x) else x for x in args if x))
 
 class BaseMailer(object):
     """
