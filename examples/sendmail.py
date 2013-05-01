@@ -2,7 +2,7 @@
 import letter
 
 class Message(letter.Letter):
-    Postie = letter.Postman()
+    Postie = letter.Postman() # Unauthorized SMTP, localhost:25
 
     From    = 'larry@example.com'
     To      = 'bill@example.com'

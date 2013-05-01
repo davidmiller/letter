@@ -6,10 +6,12 @@ Let's make that as easy as possible.
 """
 from _version import __version__
 
+import collections
 import contextlib
 import email
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import itertools
 import smtplib
 import types
 
@@ -28,6 +30,8 @@ __all__ = [
 
 u = unicode
 flatten = lambda x: [item for sublist in x for item in sublist]
+stringy = lambda x: isinstance(x, types.StringTypes)
+listy   = lambda x: isinstance(x, (list, tuple))
 
 OUTBOX = []
 SMTP   = None
@@ -36,6 +40,18 @@ class Error(Exception): pass
 class NoTemplateError(Error): pass
 class NoContentError(Error): pass
 
+def _stringlist(*args):
+    """
+    Take a lists of strings or strings and flatten these into
+    a list of strings.
+
+    Arguments:
+    - `*args`: "" or [""...]
+
+    Return: [""...]
+    Exceptions: None
+    """
+    return list(itertools.chain.from_iterable(itertools.repeat(x,1) if stringy(x) else x for x in args))
 
 class BaseMailer(object):
     """
@@ -55,7 +71,7 @@ class BaseMailer(object):
         """
         return ', '.join(isinstance(to, list) and [u(x) for x in to] or [u(to)])
 
-    def send(self, sender, to, subject, plain=None, html=None):
+    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
         """
         Send the message.
 
@@ -83,7 +99,7 @@ class BaseSMTPMailer(BaseMailer):
     Construct the message
     """
 
-    def send(self, sender, to, subject, plain=None, html=None):
+    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
         """
         Send the message.
 
@@ -98,6 +114,8 @@ class BaseSMTPMailer(BaseMailer):
         - `subject`: str
         - `plain`: str
         - `html`: str
+        - `cc`: str or [str]
+        - `bcc`: str or [str]
 
         Return: None
         Exceptions: NoContentError
@@ -108,6 +126,9 @@ class BaseSMTPMailer(BaseMailer):
         msg['Subject'] = u(subject)
         msg['From']    = u(sender)
         msg['To']      = self.tolist(to)
+        msg['Cc']      = self.tolist(cc)
+
+        recipients = _stringlist(to, cc, bcc)
 
         # Attach parts into message container.
         # According to RFC 2046, the last part of a multipart message, in this case
@@ -117,7 +138,7 @@ class BaseSMTPMailer(BaseMailer):
         if html:
             msg.attach(MIMEText(u(html), 'html'))
 
-        self.deliver(msg, to)
+        self.deliver(msg, recipients)
 
 
 class SMTPMailer(BaseSMTPMailer):
@@ -191,7 +212,7 @@ class DjangoMailer(BaseMailer):
     email settings etc etc
     """
 
-    def send(self, sender, to, subject, plain=None, html=None):
+    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
         """
         Send the message.
 
@@ -210,6 +231,8 @@ class DjangoMailer(BaseMailer):
         Return: None
         Exceptions: NoContentError
         """
+        if cc or bcc:
+            raise NotImplementedError('Cc & Bcc not implemented for Django yet!')
         super(DjangoMailer, self).send(self, sender, to, subject, plain=plain, html=html)
 
         # This comes straight from the docs at
@@ -279,7 +302,7 @@ class BasePostman(object):
         """
         return self._find_tpl(name, extension='.txt'), self._find_tpl(name, extension='.html')
 
-    def _send(self, sender, to, subject, message):
+    def _send(self, sender, to, subject, message, cc=None, bcc=None):
         """
         Send a Letter (MESSAGE) from SENDER to TO, with the subject SUBJECT
 
@@ -288,16 +311,18 @@ class BasePostman(object):
         - `to`: unicode
         - `subject`: unicode
         - `message`: unicode
+        - `cc`: str or [str]
+        - `bcc`: str or [str]
 
         Return: None
         Exceptions: None
         """
-        self.mailer.send(sender, to, subject, plain=message)
+        self.mailer.send(sender, to, subject, plain=message, cc=cc, bcc=bcc)
         return
 
     send = _send
 
-    def _sendtpl(self, sender, to, subject, **kwargs):
+    def _sendtpl(self, sender, to, subject, cc=None, bcc=None, **kwargs):
         """
         Send a Letter from SENDER to TO, with the subject SUBJECT.
         Use the current template, with KWARGS as the context.
@@ -306,6 +331,8 @@ class BasePostman(object):
         - `sender`: unicode
         - `to`: unicode
         - `subject`: unicode
+        - `cc`: str or [str]
+        - `bcc`: str or [str]
         - `**kwargs`: objects
 
         Return: None
@@ -314,7 +341,7 @@ class BasePostman(object):
         # message = mold.cast(self._activetpl, **kwargs)
         # self._send(sender, to, subject, message)
         plain, html = self.body(**kwargs)
-        self.mailer.send(sender, to, subject, plain=plain, html=html)
+        self.mailer.send(sender, to, subject, plain=plain, html=html, cc=cc, bcc=bcc)
         return
 
     def body(self, **kwargs):
@@ -440,7 +467,9 @@ class Letter(object):
                 klass.From,
                 to,
                 klass.Subject,
-                klass.Body
+                klass.Body,
+                cc=getattr(klass, 'Cc', None),
+                bcc=getattr(klass, 'Bcc', None),
                 )
             return
 
@@ -449,6 +478,8 @@ class Letter(object):
                 klass.From,
                 to,
                 klass.Subject,
+                cc=getattr(klass, 'Cc', None),
+                bcc=getattr(klass, 'Bcc', None),
                 **klass.Context
                 )
 

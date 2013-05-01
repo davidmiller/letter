@@ -8,7 +8,7 @@ import letter
 HERE = os.path.dirname(__file__)
 
 class Message(letter.Letter):
-    Postie   = letter.GmailPostman(HERE, user=user, pw=pw)
+    Postie   = letter.GmailPostman(templatedir=HERE, user=user, pw=pw)
 
     From     = 'bill@example.com'
     To       = 'larry@example.com'
@@ -20,5 +20,7 @@ class Message(letter.Letter):
         'link': 'Examples!',
         'time': time.time()
         }
+
+
 
 Message.send()
