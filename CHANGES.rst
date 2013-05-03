@@ -1,3 +1,7 @@
+0.3
++++
+Add django contrib views for use with contact forms
+
 0.2.2.1
 +++++++
 Fix bug sending mails to multpile recipients.

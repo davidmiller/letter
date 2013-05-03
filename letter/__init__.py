@@ -71,9 +71,9 @@ class BaseMailer(object):
         """
         return ', '.join(isinstance(to, list) and [u(x) for x in to] or [u(to)])
 
-    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
+    def sanity_check(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
         """
-        Send the message.
+        Sanity check the message.
 
         If we have PLAIN and HTML versions, send a multipart alternative
         MIME message, else send whichever we do have.
@@ -120,7 +120,7 @@ class BaseSMTPMailer(BaseMailer):
         Return: None
         Exceptions: NoContentError
         """
-        super(BaseSMTPMailer, self).send(sender, to, subject, plain=plain, html=html)
+        self.sanity_check(sender, to, subject, plain=plain, html=html)
         # Create message container - the correct MIME type is multipart/alternative.
         msg = MIMEMultipart('alternative')
         msg['Subject'] = u(subject)
@@ -233,7 +233,9 @@ class DjangoMailer(BaseMailer):
         """
         if cc or bcc:
             raise NotImplementedError('Cc & Bcc not implemented for Django yet!')
-        super(DjangoMailer, self).send(self, sender, to, subject, plain=plain, html=html)
+
+        self.sanity_check(sender, to, subject, plain=plain, html=html,
+                          cc=cc, bcc=bcc)
 
         # This comes straight from the docs at
         # https://docs.djangoproject.com/en/dev/topics/email/
@@ -242,9 +244,9 @@ class DjangoMailer(BaseMailer):
         if not plain:
             plain = ''
 
-        msg = EmailMultiAlternatives(u(subject), u(text_content), u(plain), self.tolist(to))
+        msg = EmailMultiAlternatives(u(subject), u(plain), u(sender), _stringlist(to))
 
-        if html_content:
+        if html:
             msg.attach_alternative(u(html), "text/html")
 
         msg.send()

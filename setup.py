@@ -38,5 +38,5 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries"
         ],
-    packages = ['letter'],
+    packages = ['letter', 'letter.contrib'],
     )
