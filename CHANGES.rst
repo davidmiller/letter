@@ -1,3 +1,7 @@
+0.3.1
++++++
+Add extra composability to the django contrib view.
+
 0.3
 +++
 Add django contrib views for use with contact forms

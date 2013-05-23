@@ -17,7 +17,7 @@ class ContactForm(forms.Form):
     email   = forms.EmailField()
     message = forms.CharField(widget=forms.Textarea)
 
-    def send_email(self):
+    def send_email(self, to):
         """
         Do work.
         """
@@ -35,7 +35,7 @@ class ContactForm(forms.Form):
             Postie = letter.DjangoPostman()
 
             From    = getattr(settings, 'DEFAULT_FROM_EMAIL', 'contact@example.com')
-            To      = getattr(settings, 'CONTACT_EMAIL',      'contact@example.com')
+            To      = to
             Subject = '{0} - Contact Form'.format(site.domain)
             Body    = body
 
@@ -54,10 +54,11 @@ class ContactView(FormView):
     """
     template_name = 'contact.html'
     form_class    = ContactForm
+    to_addr       = getattr(settings, 'CONTACT_EMAIL',      'contact@example.com')
 
     def form_valid(self, form):
         """
         Praise be, someone has spammed us.
         """
-        form.send_email()
+        form.send_email(to=self.to_addr)
         return super(ContactView, self).form_valid(form)
