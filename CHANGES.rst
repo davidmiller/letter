@@ -1,3 +1,10 @@
+0.4
++++
+Frist semi-stable release.
+Adds attachments, allows sending messages without a subject.
+python -m letter does things now.
+
+
 0.3.1
 +++++
 Add extra composability to the django contrib view.
