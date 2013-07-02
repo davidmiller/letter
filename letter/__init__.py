@@ -6,11 +6,14 @@ Let's make that as easy as possible.
 """
 from _version import __version__
 
-import collections
 import contextlib
 import email
+from email import encoders
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.audio import MIMEAudio
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 import itertools
 import mimetypes
 import smtplib
@@ -18,7 +21,6 @@ import types
 
 import ffs
 from ffs.contrib import mold
-import jinja2
 
 __all__ = [
     '__version__',
