@@ -130,6 +130,22 @@ class DjangoPostmanTestCase(TestCase):
 
 class TestLetterTestCase(unittest.TestCase):
 
+    def test_send_no_subject(self):
+        "Not failing stupidly please"
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To       = 'larry@example.com'
+            From     = 'bill@example.com'
+            Template = 'hai'
+
+        # This is essentially ensuring that we don't blow up if there is
+        # no subject.
+        Message.send()
+        self.assertEqual(1, len(postie.send.call_args_list))
+
     def test_send_templated_no_context(self):
         "Not failing stupidly please"
         postie = MagicMock(name='Mock Postie')

@@ -521,13 +521,15 @@ class Letter(object):
     @classmethod
     def send(klass):
         to = klass.To
+        subject = getattr(klass, 'Subject', '')
+
         if isinstance(to, types.StringTypes):
             to = [to]
         if getattr(klass, 'Body', None):
             klass.Postie.send(
                 klass.From,
                 to,
-                klass.Subject,
+                subject,
                 klass.Body,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
@@ -539,7 +541,7 @@ class Letter(object):
             klass.Postie.send(
                 klass.From,
                 to,
-                klass.Subject,
+                subject,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
                 attach=getattr(klass, 'Attach', None),
