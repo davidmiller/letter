@@ -12,6 +12,7 @@ import email
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import itertools
+import mimetypes
 import smtplib
 import types
 
@@ -52,6 +53,54 @@ def _stringlist(*args):
     Exceptions: None
     """
     return list(itertools.chain.from_iterable(itertools.repeat(x,1) if stringy(x) else x for x in args if x))
+
+
+class Attachment(object):
+    """
+    A file we're attaching to an email.
+    """
+    def __init__(self, path):
+        self.path = ffs.Path(path)
+
+    def as_msg(self):
+        """
+        Convert ourself to be a message part of the appropriate
+        MIME type.
+
+        Return: MIMEBase
+        Exceptions: None
+        """
+        # Guess the content type based on the file's extension.  Encoding
+        # will be ignored, although we should check for simple things like
+        # gzip'd or compressed files.
+        ctype, encoding = mimetypes.guess_type(str(self.path))
+        if ctype is None or encoding is not None:
+            # No guess could be made, or the file is encoded (compressed), so
+            # use a generic bag-of-bits type.
+            ctype = 'application/octet-stream'
+        maintype, subtype = ctype.split('/', 1)
+        if maintype == 'text':
+            # Note: we should handle calculating the charset
+            msg = MIMEText(self.path.read(), _subtype=subtype)
+        elif maintype == 'image':
+            fp = self.path.open('rb')
+            msg = MIMEImage(fp.read(), _subtype=subtype)
+            fp.close()
+        elif maintype == 'audio':
+            fp = self.path.open('rb')
+            msg = MIMEAudio(fp.read(), _subtype=subtype)
+            fp.close()
+        else:
+            fp = self.path.open('rb')
+            msg = MIMEBase(maintype, subtype)
+            msg.set_payload(fp.read())
+            fp.close()
+            # Encode the payload using Base64
+            encoders.encode_base64(msg)
+            filename = self.path[-1]
+            msg.add_header('Content-Disposition', 'attachment', filename=filename)
+        return msg
+
 
 class BaseMailer(object):
     """
@@ -99,7 +148,8 @@ class BaseSMTPMailer(BaseMailer):
     Construct the message
     """
 
-    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
+    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None,
+             attach=None):
         """
         Send the message.
 
@@ -116,6 +166,7 @@ class BaseSMTPMailer(BaseMailer):
         - `html`: str
         - `cc`: str or [str]
         - `bcc`: str or [str]
+        - `attach`: str or [str]
 
         Return: None
         Exceptions: NoContentError
@@ -137,6 +188,11 @@ class BaseSMTPMailer(BaseMailer):
             msg.attach(MIMEText(u(plain), 'plain'))
         if html:
             msg.attach(MIMEText(u(html), 'html'))
+
+        # Deal with attachments.
+        if attach:
+            for p in _stringlist(attach):
+                msg.attach(Attachment(p).as_msg())
 
         self.deliver(msg, recipients)
 
@@ -212,7 +268,8 @@ class DjangoMailer(BaseMailer):
     email settings etc etc
     """
 
-    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None):
+    def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None,
+             attach=None):
         """
         Send the message.
 
@@ -227,12 +284,15 @@ class DjangoMailer(BaseMailer):
         - `subject`: str
         - `plain`: str
         - `html`: str
+        - `attach`: str or iterable of str
 
         Return: None
         Exceptions: NoContentError
         """
         if cc or bcc:
             raise NotImplementedError('Cc & Bcc not implemented for Django yet!')
+        if attach:
+            raise NotImplementedError('Attachments not implemented for Django yet!')
 
         self.sanity_check(sender, to, subject, plain=plain, html=html,
                           cc=cc, bcc=bcc)
@@ -304,7 +364,7 @@ class BasePostman(object):
         """
         return self._find_tpl(name, extension='.txt'), self._find_tpl(name, extension='.html')
 
-    def _send(self, sender, to, subject, message, cc=None, bcc=None):
+    def _send(self, sender, to, subject, message, cc=None, bcc=None, attach=None):
         """
         Send a Letter (MESSAGE) from SENDER to TO, with the subject SUBJECT
 
@@ -319,12 +379,12 @@ class BasePostman(object):
         Return: None
         Exceptions: None
         """
-        self.mailer.send(sender, to, subject, plain=message, cc=cc, bcc=bcc)
+        self.mailer.send(sender, to, subject, plain=message, cc=cc, bcc=bcc, attach=attach)
         return
 
     send = _send
 
-    def _sendtpl(self, sender, to, subject, cc=None, bcc=None, **kwargs):
+    def _sendtpl(self, sender, to, subject, cc=None, bcc=None, attach=None, **kwargs):
         """
         Send a Letter from SENDER to TO, with the subject SUBJECT.
         Use the current template, with KWARGS as the context.
@@ -340,10 +400,9 @@ class BasePostman(object):
         Return: None
         Exceptions: None
         """
-        # message = mold.cast(self._activetpl, **kwargs)
-        # self._send(sender, to, subject, message)
         plain, html = self.body(**kwargs)
-        self.mailer.send(sender, to, subject, plain=plain, html=html, cc=cc, bcc=bcc)
+        self.mailer.send(sender, to, subject, plain=plain, html=html, cc=cc, bcc=bcc,
+                         attach=attach)
         return
 
     def body(self, **kwargs):
@@ -472,6 +531,7 @@ class Letter(object):
                 klass.Body,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
+                attach=getattr(klass, 'Attach', None),
                 )
             return
 
@@ -482,7 +542,8 @@ class Letter(object):
                 klass.Subject,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
-                **klass.Context
+                attach=getattr(klass, 'Attach', None),
+                **getattr(klass, 'Context', {})
                 )
 
 """

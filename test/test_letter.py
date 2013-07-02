@@ -22,6 +22,7 @@ def teardown_module():
     utils.teardown_test_environment()
 
 
+
 class BaseMailerTestCase(unittest.TestCase):
     def setUp(self):
         pass
@@ -125,9 +126,133 @@ class DjangoPostmanTestCase(TestCase):
 
         Message.send()
 
-        # self.assertEqual(1, len(mail.outbox))
-        # self.assertEqual('bill@example.com', mail.outbox[0].from_email)
 
+
+class TestLetterTestCase(unittest.TestCase):
+
+    def test_send_templated_no_context(self):
+        "Not failing stupidly please"
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To       = 'larry@example.com'
+            From     = 'bill@example.com'
+            Subject  = 'My Cool mail'
+            Template = 'hai'
+
+        # This is essentially testing that the call
+        # to determine the template context does so
+        # in a way that doesn't raise an AttributeError
+        Message.send()
+        self.assertEqual(1, len(postie.send.call_args_list))
+
+    def test_send_attachments(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To      = 'larry@example.com'
+            From    = 'bill@example.com'
+            Subject = 'My Cool mail'
+            Body    = 'hai'
+            Attach  = '/tmp/some.file'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], '/tmp/some.file')
+
+    def test_send_attachments_tuple(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To      = 'larry@example.com'
+            From    = 'bill@example.com'
+            Subject = 'My Cool mail'
+            Body    = 'hai'
+            Attach  = '/tmp/some.file', '/tmp/other.file'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], ('/tmp/some.file', '/tmp/other.file'))
+
+    def test_send_no_attachments(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To      = 'larry@example.com'
+            From    = 'bill@example.com'
+            Subject = 'My Cool mail'
+            Body    = 'hai'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], None)
+
+    def test_send_attachments_template(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To       = 'larry@example.com'
+            From     = 'bill@example.com'
+            Subject  = 'My Cool mail'
+            Template = 'hai'
+            Attach   = '/tmp/some.file'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], '/tmp/some.file')
+
+    def test_send_attachments_tuple_template(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To       = 'larry@example.com'
+            From     = 'bill@example.com'
+            Subject  = 'My Cool mail'
+            Template = 'hai'
+            Attach   = '/tmp/some.file', '/tmp/other.file'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], ('/tmp/some.file', '/tmp/other.file'))
+
+    def test_send_no_attachments_template(self):
+        "Should send the attachment"
+
+        postie = MagicMock(name='Mock Postie')
+
+        class Message(letter.Letter):
+            Postie = postie
+
+            To       = 'larry@example.com'
+            From     = 'bill@example.com'
+            Subject  = 'My Cool mail'
+            Template = 'hai'
+
+        Message.send()
+        args, kwargs = postie.send.call_args
+        self.assertEqual(kwargs['attach'], None)
 
 
 
