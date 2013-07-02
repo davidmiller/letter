@@ -3,6 +3,7 @@
 Frist semi-stable release.
 Adds attachments, allows sending messages without a subject.
 python -m letter does things now.
+Allow the setting of replyto headers.
 
 
 0.3.1

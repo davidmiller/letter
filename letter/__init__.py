@@ -149,7 +149,7 @@ class BaseSMTPMailer(BaseMailer):
     """
 
     def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None,
-             attach=None):
+             replyto=None, attach=None):
         """
         Send the message.
 
@@ -166,6 +166,7 @@ class BaseSMTPMailer(BaseMailer):
         - `html`: str
         - `cc`: str or [str]
         - `bcc`: str or [str]
+        - `replyto`: str
         - `attach`: str or [str]
 
         Return: None
@@ -180,6 +181,9 @@ class BaseSMTPMailer(BaseMailer):
         msg['Cc']      = self.tolist(cc)
 
         recipients = _stringlist(to, cc, bcc)
+
+        if replyto:
+            msg.add_header('reply-to', replyto)
 
         # Attach parts into message container.
         # According to RFC 2046, the last part of a multipart message, in this case
@@ -269,7 +273,7 @@ class DjangoMailer(BaseMailer):
     """
 
     def send(self, sender, to, subject, plain=None, html=None, cc=None, bcc=None,
-             attach=None):
+             attach=None, replyto=None):
         """
         Send the message.
 
@@ -285,6 +289,7 @@ class DjangoMailer(BaseMailer):
         - `plain`: str
         - `html`: str
         - `attach`: str or iterable of str
+        - `replyto`: str
 
         Return: None
         Exceptions: NoContentError
@@ -293,6 +298,8 @@ class DjangoMailer(BaseMailer):
             raise NotImplementedError('Cc & Bcc not implemented for Django yet!')
         if attach:
             raise NotImplementedError('Attachments not implemented for Django yet!')
+        if replyto:
+            raise NotImplementedError('Setting the Reply To header not implemented for Django yet!')
 
         self.sanity_check(sender, to, subject, plain=plain, html=html,
                           cc=cc, bcc=bcc)
@@ -364,7 +371,7 @@ class BasePostman(object):
         """
         return self._find_tpl(name, extension='.txt'), self._find_tpl(name, extension='.html')
 
-    def _send(self, sender, to, subject, message, cc=None, bcc=None, attach=None):
+    def _send(self, sender, to, subject, message, cc=None, bcc=None, attach=None, replyto=None):
         """
         Send a Letter (MESSAGE) from SENDER to TO, with the subject SUBJECT
 
@@ -375,16 +382,17 @@ class BasePostman(object):
         - `message`: unicode
         - `cc`: str or [str]
         - `bcc`: str or [str]
+        ` `replyto`: str
 
         Return: None
         Exceptions: None
         """
-        self.mailer.send(sender, to, subject, plain=message, cc=cc, bcc=bcc, attach=attach)
+        self.mailer.send(sender, to, subject, plain=message, cc=cc, bcc=bcc, attach=attach, replyto=replyto)
         return
 
     send = _send
 
-    def _sendtpl(self, sender, to, subject, cc=None, bcc=None, attach=None, **kwargs):
+    def _sendtpl(self, sender, to, subject, cc=None, bcc=None, attach=None, replyto=None, **kwargs):
         """
         Send a Letter from SENDER to TO, with the subject SUBJECT.
         Use the current template, with KWARGS as the context.
@@ -395,6 +403,7 @@ class BasePostman(object):
         - `subject`: unicode
         - `cc`: str or [str]
         - `bcc`: str or [str]
+        - `replyto`: str
         - `**kwargs`: objects
 
         Return: None
@@ -402,7 +411,7 @@ class BasePostman(object):
         """
         plain, html = self.body(**kwargs)
         self.mailer.send(sender, to, subject, plain=plain, html=html, cc=cc, bcc=bcc,
-                         attach=attach)
+                         replyto=replyto, attach=attach)
         return
 
     def body(self, **kwargs):
@@ -533,6 +542,7 @@ class Letter(object):
                 klass.Body,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
+                replyto=getattr(klass, 'ReplyTo', None),
                 attach=getattr(klass, 'Attach', None),
                 )
             return
@@ -544,6 +554,7 @@ class Letter(object):
                 subject,
                 cc=getattr(klass, 'Cc', None),
                 bcc=getattr(klass, 'Bcc', None),
+                replyto=getattr(klass, 'ReplyTo', None),
                 attach=getattr(klass, 'Attach', None),
                 **getattr(klass, 'Context', {})
                 )
