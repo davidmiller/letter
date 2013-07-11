@@ -72,6 +72,9 @@ class Attachment(object):
         Return: MIMEBase
         Exceptions: None
         """
+        # Based upon http://docs.python.org/2/library/email-examples.html
+        # with minimal tweaking
+
         # Guess the content type based on the file's extension.  Encoding
         # will be ignored, although we should check for simple things like
         # gzip'd or compressed files.
@@ -229,7 +232,6 @@ class SMTPMailer(BaseSMTPMailer):
         s = smtplib.SMTP(self.host, self.port)
         # sendmail function takes 3 arguments: sender's address, recipient's address
         # and message to send - here it is sent as one string.
-
         s.sendmail(message['From'], to, message.as_string())
         s.quit()
         return
@@ -296,8 +298,6 @@ class DjangoMailer(BaseMailer):
         Return: None
         Exceptions: NoContentError
         """
-        if cc or bcc:
-            raise NotImplementedError('Cc & Bcc not implemented for Django yet!')
         if attach:
             raise NotImplementedError('Attachments not implemented for Django yet!')
         if replyto:
@@ -306,6 +306,11 @@ class DjangoMailer(BaseMailer):
         self.sanity_check(sender, to, subject, plain=plain, html=html,
                           cc=cc, bcc=bcc)
 
+        if not cc:
+            cc = []
+        if not bcc:
+            bcc = []
+
         # This comes straight from the docs at
         # https://docs.djangoproject.com/en/dev/topics/email/
         from django.core.mail import EmailMultiAlternatives
@@ -313,7 +318,8 @@ class DjangoMailer(BaseMailer):
         if not plain:
             plain = ''
 
-        msg = EmailMultiAlternatives(u(subject), u(plain), u(sender), _stringlist(to))
+        msg = EmailMultiAlternatives(u(subject), u(plain), u(sender), _stringlist(to),
+                                     bcc=bcc, cc=cc)
 
         if html:
             msg.attach_alternative(u(html), "text/html")
