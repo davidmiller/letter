@@ -9,6 +9,8 @@ from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.views.generic.edit import FormView
 
+u = unicode
+
 class ContactForm(forms.Form):
     """"
     Mailto links are awzm.
@@ -23,11 +25,11 @@ class ContactForm(forms.Form):
         """
         site = Site.objects.get_current()
 
-        body = "Contact-form from: {0}\n\n{1}".format(
-            '{0} <{1}>'.format(
-            self.cleaned_data['name'],
-            self.cleaned_data['email']),
-            self.cleaned_data['message'])
+        body = u"Contact-form from: {0}\n\n{1}".format(
+            u'{0} <{1}>'.format(
+                u(self.cleaned_data['name']),
+                u(self.cleaned_data['email'])),
+                u(self.cleaned_data['message']))
 
         import letter
 

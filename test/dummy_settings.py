@@ -12,3 +12,7 @@ DATABASES = {
 }
 SECRET_KEY = 'wat'
 TEMPLATE_DIRS = (os.path.join(os.path.dirname(__file__), 'templates'))
+# SITE_ID=1
+# INSTALLED_APPS = (
+#     'django.contrib.sites',
+#     )
