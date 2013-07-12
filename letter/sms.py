@@ -4,8 +4,6 @@ Sending SMS with letter.
 import twilio
 from twilio.rest import TwilioRestClient
 
-from letter import BasePostman
-
 class TwillioPostie(object):
     """
     Render messages from templates and handle deliery.
@@ -25,7 +23,6 @@ class TwillioPostie(object):
                 )
             print msg.sid
         except twilio.TwilioRestException as e:
-            print e
 
 
 class SMS(object):

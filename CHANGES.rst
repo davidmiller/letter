@@ -4,7 +4,8 @@ Frist semi-stable release.
 Adds attachments, allows sending messages without a subject.
 python -m letter does things now.
 Allow the setting of replyto headers.
-
+Adds SMS messages via Twilio
+Add Tweets via tweepy
 
 0.3.1
 +++++
