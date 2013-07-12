@@ -2,7 +2,7 @@ import getpass, os
 
 fromaddr = raw_input('from > ')
 to  = raw_input('to > ')
-reply_to  = raw_input('CC > ')
+reply_to  = raw_input('Replyto > ')
 
 import letter
 

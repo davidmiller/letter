@@ -27,9 +27,9 @@ class ContactForm(forms.Form):
 
         body = u"Contact-form from: {0}\n\n{1}".format(
             u'{0} <{1}>'.format(
-                u(self.cleaned_data['name']),
-                u(self.cleaned_data['email'])),
-                u(self.cleaned_data['message']))
+                u(self.cleaned_data.get('name', '')),
+                u(self.cleaned_data.get('email', ''))),
+                u(self.cleaned_data.get('message', '')))
 
         import letter
 

@@ -25,6 +25,7 @@ class ContactFormTestCase(TestCase):
     def test_send_email(self):
         "Send an email"
         form = contact.ContactForm()
+        form.cleaned_data = {}
         with patch.object(letter.Letter, 'send') as psend:
             with patch.object(contact.Site.objects, 'get_current') as psite:
                 psite.domain = 'example.com'

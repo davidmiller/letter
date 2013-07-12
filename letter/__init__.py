@@ -102,8 +102,9 @@ class Attachment(object):
             fp.close()
             # Encode the payload using Base64
             encoders.encode_base64(msg)
-            filename = self.path[-1]
-            msg.add_header('Content-Disposition', 'attachment', filename=filename)
+
+        filename = str(self.path[-1])
+        msg.add_header('Content-Disposition', 'attachment', filename=filename)
         return msg
 
 
@@ -179,11 +180,12 @@ class BaseSMTPMailer(BaseMailer):
         """
         self.sanity_check(sender, to, subject, plain=plain, html=html)
         # Create message container - the correct MIME type is multipart/alternative.
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('mixed')
         msg['Subject'] = u(subject)
         msg['From']    = u(sender)
         msg['To']      = self.tolist(to)
-        msg['Cc']      = self.tolist(cc)
+        if cc:
+            msg['Cc']      = self.tolist(cc)
 
         recipients = _stringlist(to, cc, bcc)
 
