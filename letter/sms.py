@@ -23,6 +23,7 @@ class TwillioPostie(object):
                 )
             print msg.sid
         except twilio.TwilioRestException as e:
+            raise
 
 
 class SMS(object):
