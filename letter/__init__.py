@@ -300,10 +300,11 @@ class DjangoMailer(BaseMailer):
         Return: None
         Exceptions: NoContentError
         """
+        headers = {}
         if attach:
             raise NotImplementedError('Attachments not implemented for Django yet!')
         if replyto:
-            raise NotImplementedError('Setting the Reply To header not implemented for Django yet!')
+            headers['Reply-To'] = replyto
 
         self.sanity_check(sender, to, subject, plain=plain, html=html,
                           cc=cc, bcc=bcc)
@@ -321,7 +322,7 @@ class DjangoMailer(BaseMailer):
             plain = ''
 
         msg = EmailMultiAlternatives(u(subject), u(plain), u(sender), _stringlist(to),
-                                     bcc=bcc, cc=cc)
+                                     bcc=bcc, cc=cc, headers=headers)
 
         if html:
             msg.attach_alternative(u(html), "text/html")

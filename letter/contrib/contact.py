@@ -11,10 +11,7 @@ from django.views.generic.edit import FormView
 
 u = unicode
 
-class ContactForm(forms.Form):
-    """"
-    Mailto links are awzm.
-    """
+class EmailForm(forms.Form):
     name    = forms.CharField()
     email   = forms.EmailField()
     message = forms.CharField(widget=forms.Textarea)
@@ -23,13 +20,8 @@ class ContactForm(forms.Form):
         """
         Do work.
         """
-        site = Site.objects.get_current()
-
-        body = u"Contact-form from: {0}\n\n{1}".format(
-            u'{0} <{1}>'.format(
-                u(self.cleaned_data.get('name', '')),
-                u(self.cleaned_data.get('email', ''))),
-                u(self.cleaned_data.get('message', '')))
+        body = self.body()
+        subject = self.subject()
 
         import letter
 
@@ -38,15 +30,52 @@ class ContactForm(forms.Form):
 
             From    = getattr(settings, 'DEFAULT_FROM_EMAIL', 'contact@example.com')
             To      = to
-            Subject = '{0} - Contact Form'.format(site.domain)
+            Subject = subject
             Body    = body
 
-        Message.send()
+        if hasattr(self, 'reply_to'):
+            Message.ReplyTo = self.reply_to()
 
+        Message.send()
         return
 
 
-class ContactView(FormView):
+class ContactForm(EmailForm):
+    """"
+    Mailto links are awzm.
+    """
+    def body(self):
+        return u"Contact-form from: {0}\n\n{1}".format(
+            u'{0} <{1}>'.format(
+                u(self.cleaned_data.get('name', '')),
+                u(self.cleaned_data.get('email', ''))),
+            u(self.cleaned_data.get('message', '')))
+
+    def subject(self):
+        site = Site.objects.get_current()
+        return '{0} - Contact Form'.format(site.domain)
+
+
+class EmailView(FormView):
+    """
+    Base class for views that will send an email.
+
+    Subclasses should specify the following properties:
+    * template_name
+    * form_class
+    * success_url
+    """
+    to_addr       = getattr(settings, 'CONTACT_EMAIL',      'contact@example.com')
+
+    def form_valid(self, form):
+        """
+        Praise be, someone has spammed us.
+        """
+        form.send_email(to=self.to_addr)
+        return super(EmailView, self).form_valid(form)
+
+
+class ContactView(EmailView):
     """
     Pointless form for people who don't like their email clients
 
@@ -56,11 +85,3 @@ class ContactView(FormView):
     """
     template_name = 'contact.html'
     form_class    = ContactForm
-    to_addr       = getattr(settings, 'CONTACT_EMAIL',      'contact@example.com')
-
-    def form_valid(self, form):
-        """
-        Praise be, someone has spammed us.
-        """
-        form.send_email(to=self.to_addr)
-        return super(ContactView, self).form_valid(form)

@@ -1,3 +1,8 @@
+0.4.1
++++++
+Refactoring makes contrib contact views easier to use.
+Implement reply-to for Django mailer.
+
 0.4
 +++
 Frist semi-stable release.
