@@ -9,6 +9,11 @@ from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.views.generic.edit import FormView
 
+try:
+    from captcha.fields import ReCaptchaField
+except ImportError:
+    ReCaptchaField = lambda: None
+
 u = unicode
 
 class EmailForm(forms.Form):
@@ -54,6 +59,18 @@ class ContactForm(EmailForm):
     def subject(self):
         site = Site.objects.get_current()
         return '{0} - Contact Form'.format(site.domain)
+
+
+class ReCaptchaContactForm(ContactForm):
+    """
+    Contact form with a Captcha field.
+    Requires:
+
+    - django-recaptcha installation
+    - setting RECAPTCHA_PRIVATE_KEY
+    - setting RECAPTCHA_PUBLIC_KEY
+    """
+    captcha = ReCaptchaField()
 
 
 class EmailView(FormView):

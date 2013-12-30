@@ -1,3 +1,8 @@
+0.4.2
++++++
+
+Adds ReCaptchaContactForm
+
 0.4.1
 +++++
 Refactoring makes contrib contact views easier to use.
