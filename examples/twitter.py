@@ -19,6 +19,7 @@ postie = TwitterPostie(consumer_key, consumer_secret, accounts)
 class Message(Tweet):
     Postie = postie
 
+    DM   = True
     From = 'sru_dev'
     To   = 'thatdavidmiller'
     Body = 'Hello from Letter!'

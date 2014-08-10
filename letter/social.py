@@ -28,18 +28,21 @@ class TwitterPostie(object):
         self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self.accounts = accounts
 
-    def send(self, to, from_, body):
+    def send(self, to, from_, body, dm=False):
         """
         Send BODY as an @message from FROM to TO
 
         If we don't have the access tokens for FROM, raise AccountNotFoundError.
         If the tweet resulting from '@{0} {1}'.format(TO, BODY) is > 140 chars
-        raise TweetTooLongError
+        raise TweetTooLongError.
+
+        If we want to send this message as a DM, do so.
 
         Arguments:
         - `to`: str
         - `from_`: str
         - `body`: str
+        - `dm`: [optional] bool
 
         Return: None
         Exceptions: AccountNotFoundError
@@ -54,7 +57,10 @@ class TwitterPostie(object):
 
         self.auth.set_access_token(*self.accounts.get(from_))
         api = tweepy.API(self.auth)
-        api.update_status(tweet)
+        if dm:
+            api.send_direct_message(to, body)
+        else:
+            api.update_status(tweet)
         return
 
 
@@ -64,4 +70,7 @@ class Tweet(object):
     """
     @classmethod
     def send(klass):
-        klass.Postie.send(klass.To, klass.From, klass.Body)
+        dm = getattr(klass, 'DM', False)
+        klass.Postie.send(klass.To, klass.From, klass.Body, dm=dm)
+
+
