@@ -58,7 +58,7 @@ class TwitterPostie(object):
         self.auth.set_access_token(*self.accounts.get(from_))
         api = tweepy.API(self.auth)
         if dm:
-            api.send_direct_message(to, body)
+            api.send_direct_message(screen_name=to, text=body)
         else:
             api.update_status(tweet)
         return
