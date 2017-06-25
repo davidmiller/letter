@@ -21,7 +21,7 @@ import types
 
 import ffs
 from ffs.contrib import mold
-from six import u, string_types
+from six import u, string_types, text_type
 
 __all__ = [
     '__version__',
@@ -42,6 +42,11 @@ SMTP   = None
 class Error(Exception): pass
 class NoTemplateError(Error): pass
 class NoContentError(Error): pass
+
+def ensure_unicode(s):
+    if isinstance(s, text_type):
+        return s
+    return u(s)
 
 def _stringlist(*args):
     """
@@ -325,7 +330,7 @@ class DjangoMailer(BaseMailer):
                                      bcc=bcc, cc=cc, headers=headers)
 
         if html:
-            msg.attach_alternative(u(html), "text/html")
+            msg.attach_alternative(ensure_unicode(html), "text/html")
 
         msg.send()
         return
