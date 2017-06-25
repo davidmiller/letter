@@ -1,3 +1,7 @@
+0.5
++++
+Python 3 compatibility.
+
 0.4.3
 +++++
 Add Twitter DMs.

@@ -5,7 +5,7 @@ python:
   - "3.5"
   - "3.6"
 install:
-  - python setup.py develop
+#  - python setup.py develop
   - pip install -r test-requirements.txt
   - gem install rake
 before_script:
