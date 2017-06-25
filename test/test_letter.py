@@ -7,7 +7,6 @@ import unittest
 from django.core import mail
 from django.test import utils, TestCase
 import ffs
-import mailtools
 from mock import MagicMock, patch
 
 if sys.version_info <  (2, 7): import unittest2 as unittest

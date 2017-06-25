@@ -5,6 +5,8 @@ import sys
 import unittest
 
 from mock import MagicMock, patch
+import django
+django.setup()
 from django.test import utils, TestCase
 
 if sys.version_info <  (2, 7): import unittest2 as unittest

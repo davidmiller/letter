@@ -4,7 +4,7 @@ Send letters electronically.
 We assume you're likely to want to send emails from templates.
 Let's make that as easy as possible.
 """
-from _version import __version__
+from letter._version import __version__
 
 import contextlib
 import email
@@ -21,6 +21,7 @@ import types
 
 import ffs
 from ffs.contrib import mold
+from six import u, string_types
 
 __all__ = [
     '__version__',
@@ -31,9 +32,8 @@ __all__ = [
     'teardown_test_environment'
     ]
 
-u = unicode
 flatten = lambda x: [item for sublist in x for item in sublist]
-stringy = lambda x: isinstance(x, types.StringTypes)
+stringy = lambda x: isinstance(x, string_types)
 listy   = lambda x: isinstance(x, (list, tuple))
 
 OUTBOX = []
@@ -543,7 +543,7 @@ class Letter(object):
         to = klass.To
         subject = getattr(klass, 'Subject', '')
 
-        if isinstance(to, types.StringTypes):
+        if stringy(to):
             to = [to]
         if getattr(klass, 'Body', None):
             klass.Postie.send(

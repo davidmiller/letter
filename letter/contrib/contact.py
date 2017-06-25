@@ -8,13 +8,13 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.views.generic.edit import FormView
+from six import u
 
 try:
     from captcha.fields import ReCaptchaField
 except ImportError:
     ReCaptchaField = lambda: None
 
-u = unicode
 
 class EmailForm(forms.Form):
     name    = forms.CharField()
